@@ -31,7 +31,7 @@ Losing access to private keys, seed phrases, and digital assets is a nightmare�
 ---  
 ## **Smart Contract Deployment** 🏗️  
 
-- **Linea Chain Testnet Contract**: [0x82d5125995ad54d9ff7f856f4a2d2273b00d8b61](https://edu-chain-testnet.blockscout.com/address/0x82d5125995ad54d9ff7f856f4a2d2273b00d8b61)
+- **Linea Chain Testnet Contract**: [0xB91566576fa251e20ecEb81645f7aACD2bfEcbBD](https://sepolia.lineascan.build/address/0xb91566576fa251e20eceb81645f7aacd2bfecbbd)
 - **Chain**: **Linea Chain Testnet**  
 
 ---  
