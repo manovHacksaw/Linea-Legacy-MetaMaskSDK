@@ -1,6 +1,6 @@
 const CONTRACT_METADATA={
 	"compiler": {
-		"version": "0.8.28+commit.7893614a"
+		"version": "0.8.20+commit.a1b79de6"
 	},
 	"language": "Solidity",
 	"output": {
@@ -537,15 +537,15 @@ const CONTRACT_METADATA={
 	},
 	"settings": {
 		"compilationTarget": {
-			"contracts/WillManager.sol": "WillManager"
+			"WillManager.sol": "WillManager"
 		},
-		"evmVersion": "cancun",
+		"evmVersion": "paris",
 		"libraries": {},
 		"metadata": {
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": false,
+			"enabled": true,
 			"runs": 200
 		},
 		"remappings": []
@@ -559,12 +559,12 @@ const CONTRACT_METADATA={
 				"dweb:/ipfs/QmeTTxZ7qVk9rjEv2R4CpCwdf8UMCcRqDNMvzNxHc3Fnn9"
 			]
 		},
-		"contracts/WillManager.sol": {
-			"keccak256": "0x7c1660a558549bd12548a5599854c94fccc24c3bb7fc5848d214d6cf88c5edb5",
+		"WillManager.sol": {
+			"keccak256": "0xdae0a95d59e9d5aafcf2dc4e4c30f37d71bdce2e7ea4f4400f14bd27c3d3a8b7",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://2c7af700f5a01d23f70034bc38a4147cbc565566ababd38bca45e5970079aa4d",
-				"dweb:/ipfs/QmSyzL68m5KXLm599Y5KY9sYYiKsvq7yJrzy949WSHighb"
+				"bzz-raw://22985c05cf0231391a309c97d6bce49837d545cd1b741158a8fc1b41c644948b",
+				"dweb:/ipfs/QmY27PcEj3RHKFnbf8SaRxcMj7VzvDZTFLR73V1CAy6N4H"
 			]
 		}
 	},
