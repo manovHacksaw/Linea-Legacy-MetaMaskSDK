@@ -9,14 +9,14 @@ const SmartWillContext = createContext()
 
 // EDU Chain Testnet Configuration
 const EDU_CHAIN_CONFIG = {
-  chainId: "0xa045c", // 656476 in hex
-  chainName: "EDU Chain Testnet",
+  chainId: "0xe705", // 656476 in hex
+  chainName: "Linea Sepolia",
   nativeCurrency: {
-    name: "EDU",
-    symbol: "EDU",
+    name: "LineaETH",
+    symbol: "LineaETH",
     decimals: 18,
   },
-  rpcUrls: ["wss://open-campus-codex-sepolia.drpc.org"],
+  rpcUrls: ["wss://linea-sepolia-rpc.publicnode.com"],
   blockExplorerUrls: ["https://edu-chain-testnet.blockscout.com/"],
 }
 
