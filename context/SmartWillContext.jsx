@@ -1,118 +1,140 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect } from "react"
-import { ethers } from "ethers"
+
+import {
+  useAccount,
+  useBalance,
+  useReadContract,
+  useWriteContract,
+  useWaitForTransactionReceipt,
+  useConnect,
+  useDisconnect,
+  useChainId,
+  useSwitchChain,
+} from "wagmi"
+import { formatEther, parseEther } from "viem"
 import { CONTRACT_ADDRESS } from "../utils"
 import CONTRACT_ABI from "@/abi"
+import { lineaSepolia } from "wagmi/chains"
+import { metaMask } from "wagmi/connectors"
+import { toast } from "@/hooks/use-toast"
 
-const SmartWillContext = createContext()
-
-// EDU Chain Testnet Configuration
-const EDU_CHAIN_CONFIG = {
-  chainId: "0xe705", // 656476 in hex
-  chainName: "Linea Sepolia",
-  nativeCurrency: {
-    name: "LineaETH",
-    symbol: "LineaETH",
-    decimals: 18,
-  },
-  rpcUrls: ["wss://linea-sepolia-rpc.publicnode.com"],
-  blockExplorerUrls: ["https://edu-chain-testnet.blockscout.com/"],
-}
+const SmartWillContext = createContext(null)
 
 export function SmartWillProvider({ children }) {
-  const [account, setAccount] = useState(null)
-  const [balance, setBalance] = useState(0)
-  const [isConnected, setIsConnected] = useState(false)
+  const { address, isConnected } = useAccount()
+  const { data: balanceData } = useBalance({
+    address,
+    enabled: !!address,
+  })
+  const { connect, connectors } = useConnect({
+    connector: metaMask(),
+  })
+  const { disconnect } = useDisconnect()
+  const chainId = useChainId()
+  const { switchChain } = useSwitchChain()
+
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
-  const [chainId, setChainId] = useState(null)
 
-  // Listen for chain changes
-  useEffect(() => {
-    if (window.ethereum) {
-      window.ethereum.on("chainChanged", (newChainId) => {
-        setChainId(newChainId)
-        // Refresh the page when chain changes to prevent any state inconsistencies
-        window.location.reload()
-      })
-    }
-  }, [])
+  const { writeContract, isPending: isWritePending, data: txHash } = useWriteContract()
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({
+    hash: txHash,
+  })
 
-  // Switch to Linea Chain Testnet
+  // Check if we're on the correct chain
+  const isCorrectChain = chainId === lineaSepolia.id
+
+  // State to store the fetched will details
+  const [willDetails, setWillDetails] = useState(null);
+
+  // State to store error when fetching will details
+  const [fetchWillDetailsError, setFetchWillDetailsError] = useState(null);
+
+  // Owner address for which to fetch will details (can be null)
+  const [willDetailsOwnerAddress, setWillDetailsOwnerAddress] = useState(null);
+
+  // Switch to Linea Sepolia
   async function switchToEDUChain() {
-    if (!window.ethereum) return false
-
     try {
-      // Try to switch to the Linea Chain
-      await window.ethereum.request({
-        method: "wallet_switchEthereumChain",
-        params: [{ chainId: EDU_CHAIN_CONFIG.chainId }],
+      setError(null)
+      const result = await switchChain({ chainId: lineaSepolia.id });
+
+      if (result?.error) {
+        console.error("Error switching chain:", result.error);
+        setError("Failed to switch to Linea Sepolia. Please try again.");
+        toast({
+          title: "Network switch failed",
+          description: "Failed to switch to Linea Sepolia network. Please try again.",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+
+      toast({
+        title: "Network switched",
+        description: "Successfully connected to Linea Sepolia network",
+        variant: "success",
       })
       return true
-    } catch (switchError) {
-      // This error code indicates that the chain has not been added to MetaMask
-      if (switchError.code === 4902) {
-        try {
-          await window.ethereum.request({
-            method: "wallet_addEthereumChain",
-            params: [EDU_CHAIN_CONFIG],
-          })
-          return true
-        } catch (addError) {
-          console.error("Error adding Linea Chain:", addError)
-          setError("Failed to add Linea Chain to MetaMask. Please try again.")
-          return false
-        }
-      }
-      console.error("Error switching to Linea Chain:", switchError)
-      setError("Failed to switch to Linea Chain. Please try again.")
+    } catch (error) {
+      console.error("Error switching to Linea Sepolia:", error)
+      setError("Failed to switch to Linea Sepolia. Please try again.")
+      toast({
+        title: "Network switch failed",
+        description: "Failed to switch to Linea Sepolia network. Please try again.",
+        variant: "destructive",
+      })
       return false
     }
   }
 
-  // Connect to MetaMask and retrieve account info
+  // Connect to MetaMask
   async function connectWallet() {
-    if (typeof window.ethereum !== "undefined") {
-      try {
-        setLoading(true)
-        setError(null)
+    try {
+     
+      setLoading(true)
+      setError(null)
 
-        // First, try to switch to Linea Chain
-        const switched = await switchToEDUChain()
-        if (!switched) {
-          throw new Error("Failed to switch to Linea Chain")
-        }
+      // First connect the wallet
+      const result = await connect();
+     
 
-        const providerInstance = new ethers.BrowserProvider(window.ethereum)
-
-        // Get accounts and chain ID
-        const [accounts, network] = await Promise.all([
-          providerInstance.send("eth_requestAccounts", []),
-          providerInstance.getNetwork(),
-        ])
-
-        // Verify we're on the correct network
-        if (network.chainId !== BigInt(EDU_CHAIN_CONFIG.chainId)) {
-          throw new Error("Please switch to Linea Chain Testnet")
-        }
-
-        const balance = await providerInstance.getBalance(accounts[0])
-
-        setAccount(accounts[0])
-        setBalance(ethers.formatEther(balance))
-        setChainId(network.chainId.toString())
-        setIsConnected(true)
-      } catch (error) {
-        console.error("Error connecting to wallet: ", error)
-        setError(error.message || "Error connecting to wallet. Please try again.")
-        setIsConnected(false)
-      } finally {
-        setLoading(false)
+      if (result?.error) {
+        console.error("Error connecting wallet:", result.error);
+        setError(result.error.message || "Error connecting to wallet. Please try again.");
+        toast({
+          title: "Connection failed",
+          description: result.error.message || "Error connecting to wallet. Please try again.",
+          variant: "destructive",
+        });
+        return false;
       }
-    } else {
-      setError("MetaMask is required to use this app.")
-      window.open("https://metamask.io/download.html", "_blank")
+
+      // Then check if we need to switch chains after connecting
+      if (chainId !== lineaSepolia.id) {
+        await switchToEDUChain();
+      }
+
+      toast({
+        title: "Wallet connected",
+        description: "Your wallet has been successfully connected",
+        variant: "success",
+      })
+      return true
+    } catch (error) {
+      console.error("Error connecting to wallet: ", error)
+      setError(error.message || "Error connecting to wallet. Please try again.")
+      toast({
+        title: "Connection failed",
+        description: error.message || "Error connecting to wallet. Please try again.",
+        variant: "destructive",
+      })
+      return false
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -122,89 +144,78 @@ export function SmartWillProvider({ children }) {
       setLoading(true)
       setError(null)
 
-      if (!account) {
+      if (!address) {
         throw new Error("Please connect your wallet first")
       }
 
       // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
+      if (!isCorrectChain) {
+        const switched = await switchToEDUChain()
+        if (!switched) {
+          return false // Stop if chain switch fails
+        }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
-
-      const value = ethers.parseEther(amount.toString())
-      const tx = await contract.createNormalWill(beneficiary, description, claimWaitTime, { value })
-      
-      // Call the callback with the transaction hash
-      if (onHashGenerated) {
-        onHashGenerated(tx.hash)
+      const contractCall = {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "createNormalWill",
+        args: [beneficiary, description, claimWaitTime],
+        value: parseEther(amount.toString()),
       }
 
-      await tx.wait()
+
+      const writeResult = await writeContract(contractCall);
+
+      if (writeResult?.error) {
+          console.error("Error creating normal will:", writeResult.error);
+          setError(writeResult.error.message || "Error creating will. Please try again.");
+          toast({
+            title: "Will creation failed",
+            description: writeResult.error.message || "Error creating will. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+      }
+
+      // Call the callback with the transaction hash when available
+      if (txHash && onHashGenerated) {
+        onHashGenerated(txHash)
+      }
+
       return true
     } catch (error) {
       console.error("Error creating normal will:", error)
       setError(error.message || "Error creating will. Please try again.")
+      toast({
+        title: "Will creation failed",
+        description: error.message || "Error creating will. Please try again.",
+        variant: "destructive",
+      })
       return false
     } finally {
       setLoading(false)
     }
-}
-
+  }
 
   // Get normal will by owner address
-  async function getNormalWill(ownerAddress) {
-    try {
-      setLoading(true)
-      setError(null)
+  const { data: normalWillData, refetch: refetchNormalWill } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "normalWills",
+    args: [address],
+    enabled: !!address && isConnected,
+  })
 
-      if (!account) {
-        throw new Error("Please connect your wallet first")
-      }
-
-      // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
-
-      const will = await contract.normalWills(ownerAddress)
-      return will
-    } catch (error) {
-      console.error("Error fetching normal will:", error)
-      setError("Error fetching will details. Please try again.")
-      return null
-    } finally {
-      setLoading(false)
-    }
-  }
 
   // Check if address has created a will
-  async function hasCreatedWill() {
-    try {
-      if (!account) return false
-
-      // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
-
-      return await contract.hasNormalWill(account)
-    } catch (error) {
-      console.error("Error checking will existence:", error)
-      return false
-    }
-  }
+  const { data: hasWill, refetch: refetchHasWill } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "hasNormalWill",
+    args: [address],
+    enabled: !!address && isConnected,
+  })
 
   // Ping the contract to show activity
   async function ping() {
@@ -212,25 +223,51 @@ export function SmartWillProvider({ children }) {
       setLoading(true)
       setError(null)
 
-      if (!account) {
+      if (!address) {
         throw new Error("Please connect your wallet first")
       }
 
       // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
+      if (!isCorrectChain) {
+        const switched = await switchToEDUChain()
+        if (!switched) {
+          return false; // Stop if chain switch fails
+        }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const contractCall = {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "ping",
+      }
 
-      const tx = await contract.ping()
-      await tx.wait()
+      const writeResult = await writeContract(contractCall);
+
+      if (writeResult?.error) {
+          console.error("Error pinging contract:", writeResult.error);
+          setError("Error updating activity status. Please try again.");
+          toast({
+            title: "Activity update failed",
+            description: "Error updating activity status. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+      }
+
+      toast({
+        title: "Activity updated",
+        description: "Your activity status has been updated successfully",
+        variant: "success",
+      })
       return true
     } catch (error) {
       console.error("Error pinging contract:", error)
       setError("Error updating activity status. Please try again.")
+      toast({
+        title: "Activity update failed",
+        description: "Error updating activity status. Please try again.",
+        variant: "destructive",
+      })
       return false
     } finally {
       setLoading(false)
@@ -243,26 +280,53 @@ export function SmartWillProvider({ children }) {
       setLoading(true)
       setError(null)
 
-      if (!account) {
+      if (!address) {
         throw new Error("Please connect your wallet first")
       }
 
       // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
+      if (!isCorrectChain) {
+        const switched = await switchToEDUChain()
+        if (!switched) {
+          return false
+        }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const contractCall = {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "deposit",
+        value: parseEther(amount.toString()),
+      }
 
-      const amountInWei = ethers.parseEther(amount.toString())
-      const tx = await contract.deposit({ value: amountInWei })
-      await tx.wait()
+      const writeResult = await writeContract(contractCall);
+
+      if (writeResult?.error) {
+          console.error("Error depositing to will:", writeResult.error);
+          setError("Error making deposit. Please try again.");
+          toast({
+            title: "Deposit failed",
+            description: "Error making deposit. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+      }
+
+
+      toast({
+        title: "Deposit initiated",
+        description: `Depositing ${amount} Linea to your will`,
+        variant: "success",
+      })
       return true
     } catch (error) {
       console.error("Error depositing to will:", error)
       setError("Error making deposit. Please try again.")
+      toast({
+        title: "Deposit failed",
+        description: "Error making deposit. Please try again.",
+        variant: "destructive",
+      })
       return false
     } finally {
       setLoading(false)
@@ -270,75 +334,44 @@ export function SmartWillProvider({ children }) {
   }
 
   // Get wills where the connected account is a beneficiary
-  async function getNormalWillsAsBeneficiary() {
-    try {
-      setLoading(true)
-      setError(null)
+  const { data: beneficiaryWills, refetch: refetchBeneficiaryWills } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "getNormalWillAsBeneficiary",
+    args: [address],
+    enabled: !!address && isConnected,
+  })
 
-      if (!account) {
-        throw new Error("Please connect your wallet first")
-      }
+  
 
-      // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
-      }
+  // Format beneficiary wills data
+  const formattedBeneficiaryWills = beneficiaryWills
+    ? beneficiaryWills[0].map((owner, index) => ({
+      owner,
+      amount: formatEther(beneficiaryWills[1][index]),
+    }))
+    : []
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
-
-      const [owners, amounts] = await contract.getNormalWillAsBeneficiary(account)
-      console.log("OWNERS: ", owners ," \n", "BENEFICARIES: ", amounts )
-      return owners.map((owner, index) => ({
-        owner,
-        amount: ethers.formatEther(amounts[index]),
-      }))
-    } catch (error) {
-      console.error("Error fetching beneficiary wills:", error)
-      setError("Error fetching will details. Please try again.")
-      return []
-    } finally {
-      setLoading(false)
-    }
-  }
+  
 
   // Get milestone wills where the connected account is a beneficiary
-  async function getMilestoneWillsAsBeneficiary() {
-    try {
-      setLoading(true)
-      setError(null)
+  const { data: milestoneBeneficiaryWills, refetch: refetchMilestoneBeneficiaryWills } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "getMilestoneWillsAsBeneficiary",
+    args: [address],
+    enabled: !!address && isConnected,
+  })
 
-      if (!account) {
-        throw new Error("Please connect your wallet first")
-      }
-
-      // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
-      }
-
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
-
-      const [owners, willIndexes, releaseIndexes, releaseAmounts] =
-        await contract.getMilestoneWillsAsBeneficiary(account)
-
-      return owners.map((owner, index) => ({
-        owner,
-        willIndex: willIndexes[index],
-        releaseIndex: releaseIndexes[index],
-        amount: ethers.formatEther(releaseAmounts[index]),
-      }))
-    } catch (error) {
-      console.error("Error fetching milestone wills:", error)
-      setError("Error fetching milestone will details. Please try again.")
-      return []
-    } finally {
-      setLoading(false)
-    }
-  }
+  // Format milestone beneficiary wills data
+  const formattedMilestoneBeneficiaryWills = milestoneBeneficiaryWills
+    ? milestoneBeneficiaryWills[0].map((owner, index) => ({
+      owner,
+      willIndex: milestoneBeneficiaryWills[1][index],
+      releaseIndex: milestoneBeneficiaryWills[2][index],
+      amount: formatEther(milestoneBeneficiaryWills[3][index]),
+    }))
+    : []
 
   // Claim a normal will as a beneficiary
   async function claimNormalWill(ownerAddress) {
@@ -346,25 +379,52 @@ export function SmartWillProvider({ children }) {
       setLoading(true)
       setError(null)
 
-      if (!account) {
+      if (!address) {
         throw new Error("Please connect your wallet first")
       }
 
       // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
+      if (!isCorrectChain) {
+        const switched = await switchToEDUChain()
+        if (!switched) {
+          return false
+        }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const contractCall = {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "claimNormalWill",
+        args: [ownerAddress],
+      }
+      const writeResult = await writeContract(contractCall);
 
-      const tx = await contract.claimNormalWill(ownerAddress)
-      await tx.wait()
+      if (writeResult?.error) {
+          console.error("Error claiming will:", writeResult.error);
+          setError(writeResult.error.message || "Error claiming will. Please try again.");
+          toast({
+            title: "Claim failed",
+            description: writeResult.error.message || "Error claiming will. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+      }
+
+
+      toast({
+        title: "Claim initiated",
+        description: "Your claim request has been submitted",
+        variant: "success",
+      })
       return true
     } catch (error) {
       console.error("Error claiming will:", error)
       setError(error.message || "Error claiming will. Please try again.")
+      toast({
+        title: "Claim failed",
+        description: error.message || "Error claiming will. Please try again.",
+        variant: "destructive",
+      })
       return false
     } finally {
       setLoading(false)
@@ -377,49 +437,161 @@ export function SmartWillProvider({ children }) {
       setLoading(true)
       setError(null)
 
-      if (!account) {
+      if (!address) {
         throw new Error("Please connect your wallet first")
       }
 
       // Verify network before proceeding
-      if (chainId !== EDU_CHAIN_CONFIG.chainId) {
-        await switchToEDUChain()
+      if (!isCorrectChain) {
+        const switched = await switchToEDUChain()
+        if (!switched) {
+          return false
+        }
       }
 
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
-      const contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer)
+      const contractCall = {
+        address: CONTRACT_ADDRESS,
+        abi: CONTRACT_ABI,
+        functionName: "claimMilestoneWill",
+        args: [ownerAddress, willIndex, releaseIndex],
+      }
+      const writeResult = await writeContract(contractCall);
 
-      const tx = await contract.claimMilestoneWill(ownerAddress, willIndex, releaseIndex)
-      await tx.wait()
+      if (writeResult?.error) {
+          console.error("Error claiming milestone will:", writeResult.error);
+          setError(writeResult.error.message || "Error claiming milestone will. Please try again.");
+          toast({
+            title: "Milestone claim failed",
+            description: writeResult.error.message || "Error claiming milestone will. Please try again.",
+            variant: "destructive",
+          });
+          return false;
+      }
+
+
+      toast({
+        title: "Milestone claim initiated",
+        description: "Your milestone claim request has been submitted",
+        variant: "success",
+      })
       return true
     } catch (error) {
       console.error("Error claiming milestone will:", error)
       setError(error.message || "Error claiming milestone will. Please try again.")
+      toast({
+        title: "Milestone claim failed",
+        description: error.message || "Error claiming milestone will. Please try again.",
+        variant: "destructive",
+      })
       return false
     } finally {
       setLoading(false)
     }
   }
 
+  // useReadContract hook to fetch will details, disabled initially
+  const {
+    data: normalWill,
+    refetch: refetchNormalWillDetails,
+    isLoading: isFetchingWillDetails,
+    error: readContractError
+  } = useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: CONTRACT_ABI,
+    functionName: "normalWills",
+    args: willDetailsOwnerAddress ? [willDetailsOwnerAddress] : undefined, // Use undefined when address is null
+    enabled: !!willDetailsOwnerAddress && isConnected, // Only enable when address is set AND connected
+    onSuccess: (data) => {
+        setWillDetails(data);
+        setFetchWillDetailsError(null); // Clear any previous errors
+    },
+    onError: (error) => {
+        console.error("Error fetching will details:", error);
+        setFetchWillDetailsError(error.message || "Error fetching will details. Please try again.");
+        setWillDetails(null); // Clear any previous will details
+    }
+  });
+
+  // Modified fetchWillDetails function - it only sets the owner address and triggers refetch
+  const fetchWillDetails = async (ownerAddress) => {
+      try {
+          setLoading(true); // Still use loading state as this can take time
+          setError(null);
+          setFetchWillDetailsError(null);
+
+          if (!address) {
+              throw new Error("Please connect your wallet first");
+          }
+
+          // Verify network before proceeding
+          if (!isCorrectChain) {
+              const switched = await switchToEDUChain();
+              if (!switched) {
+                  setLoading(false);
+                  return null;
+              }
+          }
+
+          setWillDetailsOwnerAddress(ownerAddress); // Set the owner address
+          await refetchNormalWillDetails(); // Trigger the refetch
+          
+          return normalWill
+
+      } catch (error) {
+          console.error("Error setting will owner:", error);
+          setFetchWillDetailsError(error.message || "Error fetching will details. Please try again.");
+          return null;
+      } finally {
+          setLoading(false);
+      }
+  };
+
+
+  // Refresh data after transactions
+  useEffect(() => {
+    if (isConfirmed && address) {
+      refetchNormalWill()
+      refetchHasWill()
+      refetchBeneficiaryWills()
+      refetchMilestoneBeneficiaryWills()
+
+      toast({
+        title: "Transaction confirmed",
+        description: "Your transaction has been confirmed on the blockchain",
+        variant: "success",
+      })
+    }
+  }, [isConfirmed, address, refetchNormalWill, refetchHasWill, refetchBeneficiaryWills, refetchMilestoneBeneficiaryWills])
+
   const value = {
-    account,
-    balance,
+    account: address,
+    balance: balanceData ? formatEther(balanceData.value) : "0",
     isConnected,
-    loading,
+    loading: loading || isWritePending || isConfirming,
     error,
-    chainId,
+    connectors,
+    chainId: chainId?.toString(),
     connectWallet,
+    disconnect,
     createNormalWill,
-    getNormalWill,
-    hasCreatedWill,
+    getNormalWill: () => normalWillData,
+    hasCreatedWill: () => hasWill,
     ping,
     depositNormalWill,
     switchToEDUChain,
-    getNormalWillsAsBeneficiary,
-    getMilestoneWillsAsBeneficiary,
+    getNormalWillsAsBeneficiary: () => formattedBeneficiaryWills,
+    getMilestoneWillsAsBeneficiary: () => formattedMilestoneBeneficiaryWills,
     claimNormalWill,
     claimMilestoneWill,
+    isTransactionPending: isWritePending,
+    isTransactionConfirming: isConfirming,
+    isTransactionConfirmed: isConfirmed,
+    transactionHash: txHash,
+
+    fetchWillDetails,
+    willDetails: normalWill, // Expose the fetched will details
+    isFetchingWillDetails, // Expose the loading state
+    fetchWillDetailsError // Expose the fetch error
   }
 
   return <SmartWillContext.Provider value={value}>{children}</SmartWillContext.Provider>

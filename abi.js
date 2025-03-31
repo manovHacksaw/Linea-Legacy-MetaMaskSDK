@@ -1,6 +1,6 @@
 const CONTRACT_METADATA={
 	"compiler": {
-		"version": "0.8.20+commit.a1b79de6"
+		"version": "0.8.29+commit.ab55807c"
 	},
 	"language": "Solidity",
 	"output": {
@@ -545,7 +545,7 @@ const CONTRACT_METADATA={
 			"bytecodeHash": "ipfs"
 		},
 		"optimizer": {
-			"enabled": true,
+			"enabled": false,
 			"runs": 200
 		},
 		"remappings": []
@@ -560,11 +560,11 @@ const CONTRACT_METADATA={
 			]
 		},
 		"WillManager.sol": {
-			"keccak256": "0xdae0a95d59e9d5aafcf2dc4e4c30f37d71bdce2e7ea4f4400f14bd27c3d3a8b7",
+			"keccak256": "0x7c1660a558549bd12548a5599854c94fccc24c3bb7fc5848d214d6cf88c5edb5",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://22985c05cf0231391a309c97d6bce49837d545cd1b741158a8fc1b41c644948b",
-				"dweb:/ipfs/QmY27PcEj3RHKFnbf8SaRxcMj7VzvDZTFLR73V1CAy6N4H"
+				"bzz-raw://2c7af700f5a01d23f70034bc38a4147cbc565566ababd38bca45e5970079aa4d",
+				"dweb:/ipfs/QmSyzL68m5KXLm599Y5KY9sYYiKsvq7yJrzy949WSHighb"
 			]
 		}
 	},

@@ -85,7 +85,7 @@ const steps = [
   {
     title: "Create Your Will",
     description:
-      "Set up your digital will on Open Campus blockchain, specifying beneficiaries and asset distribution.",
+      "Set up your digital will on Linea Legacy blockchain, specifying beneficiaries and asset distribution.",
   },
   {
     title: "Define Conditions",
@@ -95,7 +95,7 @@ const steps = [
   {
     title: "Secure with Linea",
     description:
-      "Your will is securely stored and executed on the fast and eco-friendly Open Campus blockchain.",
+      "Your will is securely stored and executed on the fast and eco-friendly Linea Legacy blockchain.",
   },
   {
     title: "Easy Management",

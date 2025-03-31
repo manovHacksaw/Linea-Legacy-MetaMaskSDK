@@ -1,7 +1,8 @@
 "use client"
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Shield, Clock, Gift, FileSignature, Users } from "lucide-react";
+import { CheckCircle, Shield, Clock, Gift, FileSignature, Users } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -111,7 +112,6 @@ const CreateWill = () => {
                     Setup My Will
                   </Button>
                 </Link>
-
               </div>
             </CardContent>
           </Card>
@@ -180,9 +180,6 @@ const CreateWill = () => {
           </Card>
         </motion.div>
       </div>
-
-      {/* Subtle Particle Background (Optional - Requires a library like react-tsparticles) */}
-      {/*   <ParticlesComponent /> */}
     </div>
   );
 };

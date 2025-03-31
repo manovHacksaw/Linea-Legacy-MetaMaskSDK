@@ -3,10 +3,16 @@ import { ThemeProvider } from 'next-themes'
 import "./globals.css";
 import { SmartWillProvider } from "@/context/SmartWillContext";
 import type { Metadata } from 'next'
+import { WagmiProvider } from "wagmi";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { client, config } from "@/lib/metamaskConfig";
+
+
+
 
 export const metadata: Metadata = {
   title: 'Linea LEGACY',
-  description: 'Secure Your LegacyOn Linea Chain',
+  description: 'Secure Your LegacyOn Linea ',
 }
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -20,12 +26,16 @@ const geistMono = localFont({
   weight: "100 900",
 });
 
+
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
+    <WagmiProvider config={config}>
+       <QueryClientProvider client={client}>
     <SmartWillProvider>
       <html lang="en" >
         <body className={`${geistSans.variable} ${geistMono.variable}`}>
@@ -36,6 +46,8 @@ export default function RootLayout({
         </body>
       </html>
     </SmartWillProvider>
+    </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 // import localFont from "next/font/local";
