@@ -56,7 +56,7 @@ export function SmartWillProvider({ children }) {
   const [willDetailsOwnerAddress, setWillDetailsOwnerAddress] = useState(null);
 
   // Switch to Linea Sepolia
-  async function switchToEDUChain() {
+  async function switchToLineaChain() {
     try {
       setError(null)
       const result = await switchChain({ chainId: lineaSepolia.id });
@@ -115,7 +115,7 @@ export function SmartWillProvider({ children }) {
 
       // Then check if we need to switch chains after connecting
       if (chainId !== lineaSepolia.id) {
-        await switchToEDUChain();
+        await switchToLineaChain();
       }
 
       toast({
@@ -150,7 +150,7 @@ export function SmartWillProvider({ children }) {
 
       // Verify network before proceeding
       if (!isCorrectChain) {
-        const switched = await switchToEDUChain()
+        const switched = await switchToLineaChain()
         if (!switched) {
           return false // Stop if chain switch fails
         }
@@ -229,7 +229,7 @@ export function SmartWillProvider({ children }) {
 
       // Verify network before proceeding
       if (!isCorrectChain) {
-        const switched = await switchToEDUChain()
+        const switched = await switchToLineaChain()
         if (!switched) {
           return false; // Stop if chain switch fails
         }
@@ -286,7 +286,7 @@ export function SmartWillProvider({ children }) {
 
       // Verify network before proceeding
       if (!isCorrectChain) {
-        const switched = await switchToEDUChain()
+        const switched = await switchToLineaChain()
         if (!switched) {
           return false
         }
@@ -385,7 +385,7 @@ export function SmartWillProvider({ children }) {
 
       // Verify network before proceeding
       if (!isCorrectChain) {
-        const switched = await switchToEDUChain()
+        const switched = await switchToLineaChain()
         if (!switched) {
           return false
         }
@@ -443,7 +443,7 @@ export function SmartWillProvider({ children }) {
 
       // Verify network before proceeding
       if (!isCorrectChain) {
-        const switched = await switchToEDUChain()
+        const switched = await switchToLineaChain()
         if (!switched) {
           return false
         }
@@ -525,7 +525,7 @@ export function SmartWillProvider({ children }) {
 
           // Verify network before proceeding
           if (!isCorrectChain) {
-              const switched = await switchToEDUChain();
+              const switched = await switchToLineaChain();
               if (!switched) {
                   setLoading(false);
                   return null;
@@ -578,7 +578,7 @@ export function SmartWillProvider({ children }) {
     hasCreatedWill: () => hasWill,
     ping,
     depositNormalWill,
-    switchToEDUChain,
+    switchToLineaChain,
     getNormalWillsAsBeneficiary: () => formattedBeneficiaryWills,
     getMilestoneWillsAsBeneficiary: () => formattedMilestoneBeneficiaryWills,
     claimNormalWill,
