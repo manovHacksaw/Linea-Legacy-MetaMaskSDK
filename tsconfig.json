@@ -22,6 +22,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/CreateSimpleWill.jsx", "app/check-my-will/customized/page.jsx", "context/SmartWillContext.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "components/CreateSimpleWill.jsx", "app/check-my-will/customized/page.jsx", "context/SmartWillContext.jsx", "app/check-my-will/simple/page.jsx", "app/claimables/page.jsx"],
   "exclude": ["node_modules"]
 }

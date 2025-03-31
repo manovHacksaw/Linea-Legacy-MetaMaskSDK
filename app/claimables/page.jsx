@@ -1,157 +1,170 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { useSmartWill } from "@/context/SmartWillContext"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { ScrollText, AlertCircle, Clock, Check, Loader2, FileText, Coins, User, ArrowLeft } from "lucide-react"
-import { formatDistanceToNow } from "date-fns"
-import { isAddress } from "ethers"
-import { DotBackground } from "@/components/animateddots"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { toast } from "@/hooks/use-toast"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useSmartWill } from "@/context/SmartWillContext";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  ScrollText,
+  AlertCircle,
+  Clock,
+  Check,
+  Loader2,
+  FileText,
+  Coins,
+  User,
+  ArrowLeft,
+} from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
+import { isAddress } from "ethers";
+import { DotBackground } from "@/components/animateddots";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
 
-import { useAccount, useConnect, useDisconnect } from "wagmi"
-
-interface Claimable {
-  owner: string
-  amount: string
-  description: string
-  lastPingTime: bigint
-  claimWaitTime: bigint
-  beneficiary: string
-}
+import { useAccount, useConnect, useDisconnect } from "wagmi";
 
 export default function Claimables() {
-  const router = useRouter()
-  const { getNormalWillsAsBeneficiary, claimNormalWill, fetchWillDetails } = useSmartWill()
+  const router = useRouter();
+  const { getNormalWillsAsBeneficiary, claimNormalWill, fetchWillDetails } =
+    useSmartWill();
 
-  const { address, isConnected } = useAccount()
-  const { connectors, connect, isLoading: connectLoading, error: connectError } = useConnect()
-  const { disconnect, isLoading: disconnectLoading } = useDisconnect()
+  const { address, isConnected } = useAccount();
+  const {
+    connectors,
+    connect,
+    isLoading: connectLoading,
+    error: connectError,
+  } = useConnect();
+  const { disconnect, isLoading: disconnectLoading } = useDisconnect();
 
-  const [claimables, setClaimables] = useState<Claimable[]>([])
-  const [loading, setLoading] = useState(true)
-  const [claiming, setClaiming] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [claimables, setClaimables] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [claiming, setClaiming] = useState(null);
+  const [error, setError] = useState(null);
 
   // Consolidated Loading State
-  const isConnecting = connectLoading || disconnectLoading
-  const isLoading = loading || isConnecting
+  const isConnecting = connectLoading || disconnectLoading;
+  const isLoading = loading || isConnecting;
 
   useEffect(() => {
     const loadClaimables = async () => {
-      if (!isConnected || !address) return
+      if (!isConnected || !address) return;
 
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
       try {
-        const wills = getNormalWillsAsBeneficiary()
-
-      
+        const wills = getNormalWillsAsBeneficiary();
 
         if (!wills || wills.length === 0) {
-          setClaimables([])
-          return
+          setClaimables([]);
+          return;
         }
 
         const detailedClaimables = await Promise.all(
           wills.map(async (will) => {
             try {
-              const willDetails = await fetchWillDetails(will.owner)
-              if (!willDetails) return null
+              const willDetails = await fetchWillDetails(will.owner);
+              if (!willDetails) return null;
 
-             
-
-           
               return {
                 owner: will.owner,
                 amount: will.amount,
-                description: willDetails[5]|| "No description",
+                description: willDetails[5] || "No description",
                 lastPingTime: willDetails[2],
                 claimWaitTime: willDetails[3],
                 beneficiary: willDetails[0],
-              }
+              };
             } catch (err) {
-              console.error(`Error fetching details for will ${will.owner}:`, err)
-              return null
+              console.error(`Error fetching details for will ${will.owner}:`, err);
+              return null;
             }
           }),
-        )
+        );
 
-        const validClaimables = detailedClaimables.filter((c): c is Claimable => c !== null)
-        setClaimables(validClaimables)
-      } catch (err: any) {
-        console.error("Error loading claimables:", err)
-        setError(err.message || "Failed to load claimables")
+        const validClaimables = detailedClaimables.filter((c) => c !== null);
+        setClaimables(validClaimables);
+      } catch (err) {
+        console.error("Error loading claimables:", err);
+        setError(err.message || "Failed to load claimables");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    loadClaimables()
-  }, [address, isConnected, getNormalWillsAsBeneficiary, fetchWillDetails])
+    loadClaimables();
+  }, [address, isConnected, getNormalWillsAsBeneficiary, fetchWillDetails]);
 
-  const handleClaim = async (owner: string) => {
+  const handleClaim = async (owner) => {
     if (!owner || !isAddress(owner)) {
-      setError("Invalid owner address")
+      setError("Invalid owner address");
       toast({
         title: "Invalid address",
         description: "The owner address is invalid",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
     try {
-      setClaiming(owner)
-      setError(null)
-      const success = await claimNormalWill(owner)
+      setClaiming(owner);
+      setError(null);
+      const success = await claimNormalWill(owner);
 
       if (success) {
         toast({
           title: "Claim submitted",
           description: "Your claim has been submitted successfully",
           variant: "success",
-        })
+        });
       }
-    } catch (err: any) {
-      console.error("Error claiming:", err)
-      setError(err.message || "Failed to claim")
+    } catch (err) {
+      console.error("Error claiming:", err);
+      setError(err.message || "Failed to claim");
       toast({
         title: "Claim failed",
         description: err.message || "Failed to claim. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setClaiming(null)
+      setClaiming(null);
     }
-  }
+  };
 
-  const isClaimable = (lastPingTime: bigint, claimWaitTime: bigint) => {
-    const now = BigInt(Math.floor(Date.now() / 1000))
-    return now >= lastPingTime + claimWaitTime
-  }
+  const isClaimable = (lastPingTime, claimWaitTime) => {
+    const now = BigInt(Math.floor(Date.now() / 1000));
+    return now >= lastPingTime + claimWaitTime;
+  };
 
   // Fixed getTimeRemaining function to properly handle BigInt conversion
-  const getTimeRemaining = (lastPingTime: bigint, claimWaitTime: bigint) => {
-    const now = BigInt(Math.floor(Date.now() / 1000))
+  const getTimeRemaining = (lastPingTime, claimWaitTime) => {
+    const now = BigInt(Math.floor(Date.now() / 1000));
     // First calculate the end time in seconds (BigInt)
-    const endTimeSeconds = lastPingTime + claimWaitTime
+    const endTimeSeconds = lastPingTime + claimWaitTime;
     // Convert to milliseconds and then to Number for Date constructor
-    const endTimeMs = Number(endTimeSeconds) * 1000
+    const endTimeMs = Number(endTimeSeconds) * 1000;
 
-    if (isNaN(endTimeMs)) return "Invalid Date"
-    return formatDistanceToNow(new Date(endTimeMs), { addSuffix: true })
-  }
+    if (isNaN(endTimeMs)) return "Invalid Date";
+    return formatDistanceToNow(new Date(endTimeMs), { addSuffix: true });
+  };
 
-  const truncateAddress = (address: string) => {
-    return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : ""
-  }
+  const truncateAddress = (address) => {
+    return address ? `${address.slice(0, 6)}...${address.slice(-4)}` : "";
+  };
 
   if (!isConnected) {
     return (
@@ -159,8 +172,12 @@ export default function Claimables() {
         <div className="min-h-screen flex items-center justify-center text-white">
           <Card className="w-full max-w-md bg-black/40 backdrop-blur-sm shadow-md rounded-2xl border-gray-800">
             <CardHeader className="text-center">
-              <CardTitle className="text-xl font-semibold">Connect Wallet</CardTitle>
-              <CardDescription className="text-gray-400">Please connect your wallet to view claimables</CardDescription>
+              <CardTitle className="text-xl font-semibold">
+                Connect Wallet
+              </CardTitle>
+              <CardDescription className="text-gray-400">
+                Please connect your wallet to view claimables
+              </CardDescription>
             </CardHeader>
             <CardContent className="p-6 flex justify-center">
               {connectors.map((connector) => (
@@ -182,7 +199,10 @@ export default function Claimables() {
               ))}
             </CardContent>
             {connectError && (
-              <Alert variant="destructive" className="bg-red-900/70 text-white border-red-700 rounded-md shadow-md">
+              <Alert
+                variant="destructive"
+                className="bg-red-900/70 text-white border-red-700 rounded-md shadow-md"
+              >
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>{connectError.message}</AlertDescription>
               </Alert>
@@ -190,7 +210,7 @@ export default function Claimables() {
           </Card>
         </div>
       </DotBackground>
-    )
+    );
   }
 
   return (
@@ -207,9 +227,14 @@ export default function Claimables() {
           </Button>
 
           {(error || connectError) && (
-            <Alert variant="destructive" className="bg-red-900/70 text-white border-red-700 rounded-md shadow-md">
+            <Alert
+              variant="destructive"
+              className="bg-red-900/70 text-white border-red-700 rounded-md shadow-md"
+            >
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error || connectError?.message || "An error occurred"}</AlertDescription>
+              <AlertDescription>
+                {error || connectError?.message || "An error occurred"}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -227,7 +252,10 @@ export default function Claimables() {
           {isLoading ? (
             <div className="grid gap-6">
               {[1, 2].map((i) => (
-                <Card key={i} className="bg-black/30 shadow-md rounded-lg p-4 border-gray-800">
+                <Card
+                  key={i}
+                  className="bg-black/30 shadow-md rounded-lg p-4 border-gray-800"
+                >
                   <div className="flex items-center justify-between">
                     <div className="space-y-3">
                       <Skeleton className="h-6 w-48 bg-gray-700" />
@@ -253,10 +281,13 @@ export default function Claimables() {
               <CardContent className="p-12 text-center">
                 <div className="flex flex-col items-center justify-center space-y-4">
                   <ScrollText className="h-16 w-16 text-gray-500" />
-                  <h3 className="text-xl font-medium text-gray-300">No Claimable Assets Found</h3>
+                  <h3 className="text-xl font-medium text-gray-300">
+                    No Claimable Assets Found
+                  </h3>
                   <p className="text-gray-400 max-w-md">
-                    You don't have any claimable academic assets at this time. When someone designates you as a
-                    beneficiary, they'll appear here.
+                    You don't have any claimable academic assets at this
+                    time. When someone designates you as a beneficiary, they'll
+                    appear here.
                   </p>
                   <Button
                     onClick={() => router.push("/create-will")}
@@ -270,8 +301,14 @@ export default function Claimables() {
           ) : (
             <div className="grid gap-6">
               {claimables.map((claimable, index) => {
-                const canClaim = isClaimable(claimable.lastPingTime, claimable.claimWaitTime)
-                const timeLeft = getTimeRemaining(claimable.lastPingTime, claimable.claimWaitTime)
+                const canClaim = isClaimable(
+                  claimable.lastPingTime,
+                  claimable.claimWaitTime,
+                );
+                const timeLeft = getTimeRemaining(
+                  claimable.lastPingTime,
+                  claimable.claimWaitTime,
+                );
 
                 return (
                   <Card
@@ -285,7 +322,11 @@ export default function Claimables() {
                             <CardTitle className="text-xl font-semibold">
                               {claimable.description || "Academic Legacy"}
                             </CardTitle>
-                            {canClaim && <Badge className="bg-green-600 text-white">Ready to Claim</Badge>}
+                            {canClaim && (
+                              <Badge className="bg-green-600 text-white">
+                                Ready to Claim
+                              </Badge>
+                            )}
                           </div>
 
                           <TooltipProvider>
@@ -307,7 +348,9 @@ export default function Claimables() {
                               <TooltipTrigger asChild>
                                 <CardDescription className="text-gray-400 flex items-center gap-2 cursor-help">
                                   <User className="h-4 w-4" />
-                                  Beneficiary: {truncateAddress(claimable.beneficiary)}
+                                  Beneficiary: {truncateAddress(
+                                    claimable.beneficiary,
+                                  )}
                                 </CardDescription>
                               </TooltipTrigger>
                               <TooltipContent>
@@ -323,7 +366,9 @@ export default function Claimables() {
                               {Number.parseFloat(claimable.amount).toFixed(4)}
                             </div>
                           </div>
-                          <CardDescription className="text-gray-400">Linea Tokens</CardDescription>
+                          <CardDescription className="text-gray-400">
+                            Linea Tokens
+                          </CardDescription>
                         </div>
                       </div>
 
@@ -332,9 +377,13 @@ export default function Claimables() {
                           <Clock className="h-4 w-4 text-gray-400" />
                           <span className="text-sm">
                             {canClaim ? (
-                              <span className="text-green-400 font-medium">Available now!</span>
+                              <span className="text-green-400 font-medium">
+                                Available now!
+                              </span>
                             ) : (
-                              <span className="text-yellow-400 font-medium">Available {timeLeft}</span>
+                              <span className="text-yellow-400 font-medium">
+                                Available {timeLeft}
+                              </span>
                             )}
                           </span>
                         </div>
@@ -365,13 +414,12 @@ export default function Claimables() {
                       </div>
                     </div>
                   </Card>
-                )
+                );
               })}
             </div>
           )}
         </div>
       </div>
     </DotBackground>
-  )
+  );
 }
-

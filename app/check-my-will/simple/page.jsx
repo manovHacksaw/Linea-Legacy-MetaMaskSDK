@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useEffect, useState, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
-import { useSmartWill } from "@/context/SmartWillContext"
+
+import { useEffect, useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { useSmartWill } from "@/context/SmartWillContext";
 import {
   Loader2,
   PlusCircle,
@@ -17,47 +17,38 @@ import {
   Coins,
   Shield,
   History,
-} from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { motion, AnimatePresence } from "framer-motion"
-import { Progress } from "@/components/ui/progress"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DotBackground } from "@/components/animateddots"
-import { useAccount, useConnect, useDisconnect } from "wagmi"
-import { toast } from "@/hooks/use-toast"
+} from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { motion, AnimatePresence } from "framer-motion";
+import { Progress } from "@/components/ui/progress";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { DotBackground } from "@/components/animateddots";
+import { useAccount, useConnect, useDisconnect } from "wagmi";
+import { toast } from "@/hooks/use-toast";
 
-interface Will {
-  beneficiary: string
-  amount: bigint
-  lastPingTime: bigint
-  claimWaitTime: bigint
-  description: string
-  isClaimed: boolean
-  creationTime: bigint
-}
 
-interface InfoCardProps {
-  icon: React.FC<any>
-  title: string
-  content: string
-  highlight?: boolean
-  className?: string
-}
+
+
 
 const CheckMyWill = () => {
-  const [willDetails, setWillDetails] = useState<Will | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [depositAmount, setDepositAmount] = useState("")
-  const [timeRemaining, setTimeRemaining] = useState<string>("--")
-  const [timeProgress, setTimeProgress] = useState(0)
-  const [isDepositing, setIsDepositing] = useState(false)
-  const [isPinging, setIsPinging] = useState(false)
-  const [lastPingTimeAgo, setLastPingTimeAgo] = useState<string>("--")
-  const [withdrawalAvailable, setWithdrawalAvailable] = useState(false)
-  const [canBeneficiaryClaim, setCanBeneficiaryClaim] = useState(false)
+  const [willDetails, setWillDetails] = useState<Will | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [timeRemaining, setTimeRemaining] = useState<string>("--");
+  const [timeProgress, setTimeProgress] = useState(0);
+  const [isDepositing, setIsDepositing] = useState(false);
+  const [isPinging, setIsPinging] = useState(false);
+  const [lastPingTimeAgo, setLastPingTimeAgo] = useState<string>("--");
+  const [withdrawalAvailable, setWithdrawalAvailable] = useState(false);
+  const [canBeneficiaryClaim, setCanBeneficiaryClaim] = useState(false);
 
   const {
     ping,
@@ -68,291 +59,312 @@ const CheckMyWill = () => {
     willDetails: willDetailsFromContext,
     isFetchingWillDetails,
     fetchWillDetailsError,
-  } = useSmartWill()
-  const router = useRouter()
+  } = useSmartWill();
+  const router = useRouter();
 
-  const { address, isConnected } = useAccount()
-  const { connectors, connect, isLoading: connectLoading, error: connectError } = useConnect()
-  const { disconnect } = useDisconnect()
+  const { address, isConnected } = useAccount();
+  const {
+    connectors,
+    connect,
+    isLoading: connectLoading,
+    error: connectError,
+  } = useConnect();
+  const { disconnect } = useDisconnect();
 
   // Safely check withdrawal eligibility with proper type handling
-  const checkWithdrawalEligibility = useCallback((creationTime: bigint | undefined) => {
-    try {
-      if (creationTime === undefined) {
-        console.warn("creationTime is undefined. Skipping eligibility check.")
-        setWithdrawalAvailable(false)
-        return
+  const checkWithdrawalEligibility = useCallback(
+    (creationTime) => {
+      try {
+        if (creationTime === undefined) {
+          console.warn(
+            "creationTime is undefined. Skipping eligibility check.",
+          );
+          setWithdrawalAvailable(false);
+          return;
+        }
+        const oneYear = BigInt(365) * BigInt(24) * BigInt(60) * BigInt(60);
+        const now = BigInt(Math.floor(Date.now() / 1000));
+        const eligibilityTime = creationTime + oneYear;
+        setWithdrawalAvailable(now >= eligibilityTime);
+      } catch (err) {
+        console.error("Error checking withdrawal eligibility:", err);
+        setWithdrawalAvailable(false);
       }
-      const oneYear = BigInt(365) * BigInt(24) * BigInt(60) * BigInt(60)
-      const now = BigInt(Math.floor(Date.now() / 1000))
-      const eligibilityTime = creationTime + oneYear
-      setWithdrawalAvailable(now >= eligibilityTime)
-    } catch (err) {
-      console.error("Error checking withdrawal eligibility:", err)
-      setWithdrawalAvailable(false)
-    }
-  }, [])
+    },
+    [],
+  );
 
   // Update will details when context data changes
   useEffect(() => {
     if (willDetailsFromContext) {
-      setWillDetails(willDetailsFromContext)
-      checkWithdrawalEligibility(willDetailsFromContext.creationTime)
+      setWillDetails(willDetailsFromContext);
+      checkWithdrawalEligibility(willDetailsFromContext.creationTime);
     } else {
-      setWithdrawalAvailable(false)
+      setWithdrawalAvailable(false);
     }
-  }, [willDetailsFromContext, checkWithdrawalEligibility])
+  }, [willDetailsFromContext, checkWithdrawalEligibility]);
 
   // Fetch will details from the blockchain
   const getWillDetails = useCallback(async () => {
-    if (!address || !isConnected) return
+    if (!address || !isConnected) return;
 
-    setLoading(true)
-    setError(null)
+    setLoading(true);
+    setError(null);
     try {
-      await fetchWillDetails(address)
-    } catch (err: any) {
-      console.error("Error fetching will details:", err)
-      setError("Unable to fetch will details. Please try again.")
+      await fetchWillDetails(address);
+    } catch (err) {
+      console.error("Error fetching will details:", err);
+      setError("Unable to fetch will details. Please try again.");
       toast({
         title: "Error fetching will details",
         description: "Please refresh the page",
-        variant: "destructive"
-      })
+        variant: "destructive",
+      });
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [address, isConnected, fetchWillDetails])
+  }, [address, isConnected, fetchWillDetails]);
 
   // Check if user has a will and fetch details
   useEffect(() => {
-    let mounted = true
+    let mounted = true;
 
     async function checkAndFetchWill() {
-      if (!isConnected || !address) return
+      if (!isConnected || !address) return;
 
       try {
-        setLoading(true)
-        const hasWill = await hasCreatedWill(address)
-        if (!mounted) return
+        setLoading(true);
+        const hasWill = await hasCreatedWill(address);
+        if (!mounted) return;
 
         if (!hasWill) {
-          router.push("/create-will/simple")
+          router.push("/create-will/simple");
           toast({
             title: "No will found",
             description: "Redirecting to create a new will",
             variant: "info",
-          })
+          });
         } else {
-          await getWillDetails()
+          await getWillDetails();
         }
       } catch (err) {
-        if (!mounted) return
-        console.error("Error checking will status:", err)
-        setError("Error checking will status. Please try again.")
+        if (!mounted) return;
+        console.error("Error checking will status:", err);
+        setError("Error checking will status. Please try again.");
       } finally {
         if (mounted) {
-          setLoading(false)
+          setLoading(false);
         }
       }
     }
 
-    checkAndFetchWill()
+    checkAndFetchWill();
 
     return () => {
-      mounted = false
-    }
-  }, [address, hasCreatedWill, router, isConnected, getWillDetails])
+      mounted = false;
+    };
+  }, [address, hasCreatedWill, router, isConnected, getWillDetails]);
 
   // Update countdown timer
   useEffect(() => {
-    if (!willDetails) return
+    if (!willDetails) return;
 
-    let mounted = true
-    let intervalId: NodeJS.Timeout
+    let mounted = true;
+    let intervalId;
 
     const updateCounter = () => {
-      if (!mounted || !willDetails) return
+      if (!mounted || !willDetails) return;
 
       try {
-        const now = BigInt(Math.floor(Date.now() / 1000))
+        const now = BigInt(Math.floor(Date.now() / 1000));
 
         // Safely access properties with null checks
-        const lastPingTime = willDetails[2]
-        const claimWaitTime = willDetails[3]
+        const lastPingTime = willDetails[2];
+        const claimWaitTime = willDetails[3];
 
         if (lastPingTime === undefined || claimWaitTime === undefined) {
-          console.warn("Missing time values in will details")
-          return
+          console.warn("Missing time values in will details");
+          return;
         }
 
-        const remainingTime = lastPingTime + claimWaitTime - now
+        const remainingTime = lastPingTime + claimWaitTime - now;
 
         // Convert to Number only for display calculations - safely
-        const remainingTimeNumber = Number(remainingTime)
-        const totalTimeNumber = Number(claimWaitTime)
+        const remainingTimeNumber = Number(remainingTime);
+        const totalTimeNumber = Number(claimWaitTime);
 
         // Calculate progress percentage
-        const elapsed = totalTimeNumber - remainingTimeNumber
-        const progress = Math.min(100, Math.max(0, (elapsed / totalTimeNumber) * 100))
-        setTimeProgress(progress)
+        const elapsed = totalTimeNumber - remainingTimeNumber;
+        const progress = Math.min(
+          100,
+          Math.max(0, (elapsed / totalTimeNumber) * 100),
+        );
+        setTimeProgress(progress);
 
         // Calculate time since last ping
-        const timeSinceLastPing = now - lastPingTime
-        const daysAgo = Number(timeSinceLastPing / BigInt(24 * 60 * 60))
+        const timeSinceLastPing = now - lastPingTime;
+        const daysAgo = Number(timeSinceLastPing / BigInt(24 * 60 * 60));
 
-        if (!mounted) return
+        if (!mounted) return;
 
-        setLastPingTimeAgo(daysAgo === 0 ? "Today" : daysAgo === 1 ? "Yesterday" : `${daysAgo} days ago`)
+        setLastPingTimeAgo(
+          daysAgo === 0
+            ? "Today"
+            : daysAgo === 1
+              ? "Yesterday"
+              : `${daysAgo} days ago`,
+        );
 
         if (remainingTime <= BigInt(0)) {
-          setTimeRemaining("Beneficiary can claim")
-          setCanBeneficiaryClaim(true)
+          setTimeRemaining("Beneficiary can claim");
+          setCanBeneficiaryClaim(true);
         } else {
-          setCanBeneficiaryClaim(false)
-          const days = Number(remainingTime / BigInt(24 * 60 * 60))
-          const hours = Number((remainingTime % BigInt(24 * 60 * 60)) / BigInt(60 * 60))
-          const minutes = Number((remainingTime % BigInt(60 * 60)) / BigInt(60))
-          const seconds = Number(remainingTime % BigInt(60))
-          setTimeRemaining(`${days}d ${hours}h ${minutes}m ${seconds}s`)
+          setCanBeneficiaryClaim(false);
+          const days = Number(remainingTime / BigInt(24 * 60 * 60));
+          const hours = Number(
+            (remainingTime % BigInt(24 * 60 * 60)) / BigInt(60 * 60),
+          );
+          const minutes = Number((remainingTime % BigInt(60 * 60)) / BigInt(60));
+          const seconds = Number(remainingTime % BigInt(60));
+          setTimeRemaining(`${days}d ${hours}h ${minutes}m ${seconds}s`);
         }
       } catch (err) {
-        console.error("Error updating counter:", err)
+        console.error("Error updating counter:", err);
         // Set fallback values on error
-        setTimeRemaining("--")
-        setTimeProgress(0)
-        setCanBeneficiaryClaim(false)
+        setTimeRemaining("--");
+        setTimeProgress(0);
+        setCanBeneficiaryClaim(false);
       }
-    }
+    };
 
     // Initialize and update every second
-    updateCounter()
-    intervalId = setInterval(updateCounter, 1000)
+    updateCounter();
+    intervalId = setInterval(updateCounter, 1000);
 
     return () => {
-      mounted = false
-      clearInterval(intervalId)
-    }
-  }, [willDetails])
+      mounted = false;
+      clearInterval(intervalId);
+    };
+  }, [willDetails]);
 
   // Handle deposit
-  const handleDeposit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleDeposit = async (e) => {
+    e.preventDefault();
     if (!depositAmount || Number.parseFloat(depositAmount) <= 0) {
-      setError("Please enter a valid amount to deposit.")
+      setError("Please enter a valid amount to deposit.");
       toast({
         title: "Invalid amount",
         description: "Please enter a valid amount to deposit",
         variant: "destructive",
-      })
-      return
+      });
+      return;
     }
 
-    setIsDepositing(true)
-    setError(null)
+    setIsDepositing(true);
+    setError(null);
     try {
-      await depositNormalWill(depositAmount)
+      await depositNormalWill(depositAmount);
       toast({
         title: "Deposit successful",
         description: `Successfully deposited ${depositAmount} Linea`,
         variant: "success",
-      })
-      await getWillDetails() // Refresh details
-    } catch (err: any) {
-      console.error("Deposit error:", err)
-      setError("Failed to deposit funds. Please try again.")
+      });
+      await getWillDetails(); // Refresh details
+    } catch (err) {
+      console.error("Deposit error:", err);
+      setError("Failed to deposit funds. Please try again.");
       toast({
         title: "Deposit failed",
         description: err.message || "Failed to deposit funds. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsDepositing(false)
-      setDepositAmount("")
+      setIsDepositing(false);
+      setDepositAmount("");
     }
-  }
+  };
 
   // Handle ping
   const handlePing = async () => {
-    setIsPinging(true)
-    setError(null)
+    setIsPinging(true);
+    setError(null);
     try {
-      await ping()
+      await ping();
       toast({
         title: "Activity confirmed",
         description: "Your activity has been confirmed on the blockchain",
         variant: "success",
-      })
-      await getWillDetails() // Refresh details
-    } catch (err: any) {
-      console.error("Ping error:", err)
-      setError("Failed to confirm activity. Please try again.")
+      });
+      await getWillDetails(); // Refresh details
+    } catch (err) {
+      console.error("Ping error:", err);
+      setError("Failed to confirm activity. Please try again.");
       toast({
         title: "Activity confirmation failed",
         description: err.message || "Failed to confirm activity. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsPinging(false)
+      setIsPinging(false);
     }
-  }
+  };
 
   // Handle withdraw
   const handleWithdraw = async () => {
-    if (!willDetails) return
-    setLoading(true) // Indicate loading state during withdrawal
+    if (!willDetails) return;
+    setLoading(true); // Indicate loading state during withdrawal
     try {
       // Convert BigInt to string for the withdrawNormalWill function
-      const amountInEther = formatEther(willDetails[1])
-      await withdrawNormalWill(amountInEther)
+      const amountInEther = formatEther(willDetails[1]);
+      await withdrawNormalWill(amountInEther);
       toast({
         title: "Withdrawal successful",
         description: `Successfully withdrew ${amountInEther} Linea`,
         variant: "success",
-      })
-      await getWillDetails() // Refresh details
-    } catch (err: any) {
-      console.error("Withdraw error:", err)
-      setError("Failed to withdraw funds. Please try again.")
+      });
+      await getWillDetails(); // Refresh details
+    } catch (err) {
+      console.error("Withdraw error:", err);
+      setError("Failed to withdraw funds. Please try again.");
       toast({
         title: "Withdrawal failed",
         description: err.message || "Failed to withdraw funds. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setLoading(false) // Clear loading state after attempt
+      setLoading(false); // Clear loading state after attempt
     }
-  }
+  };
 
   // Helper function to safely format BigInt to Ether string
-  const formatEther = (value: bigint): string => {
+  const formatEther = (value) => {
     try {
-      return (Number(value) / 1e18).toFixed(6)
+      return (Number(value) / 1e18).toFixed(6);
     } catch (err) {
-      console.error("Error formatting ether value:", err)
-      return "0.0"
+      console.error("Error formatting ether value:", err);
+      return "0.0";
     }
-  }
+  };
 
   // Get status info with proper null checks
   const getStatusInfo = () => {
-    if (!willDetails) return { color: "text-gray-500", text: "Unknown" }
+    if (!willDetails) return { color: "text-gray-500", text: "Unknown" };
 
     try {
-      if (willDetails.isClaimed) return { color: "text-red-500", text: "Claimed" }
+      if (willDetails.isClaimed) return { color: "text-red-500", text: "Claimed" };
 
-      const now = BigInt(Math.floor(Date.now() / 1000))
-      const remainingTime = willDetails[2] + willDetails[3] - now
+      const now = BigInt(Math.floor(Date.now() / 1000));
+      const remainingTime = willDetails[2] + willDetails[3] - now;
 
-      if (remainingTime <= BigInt(0)) return { color: "text-red-500", text: "Claimable" }
+      if (remainingTime <= BigInt(0)) return { color: "text-red-500", text: "Claimable" };
       if (remainingTime <= willDetails[3] / BigInt(10))
-        return { color: "text-yellow-500", text: "Action Needed" }
-      return { color: "text-green-500", text: "Active" }
+        return { color: "text-yellow-500", text: "Action Needed" };
+      return { color: "text-green-500", text: "Active" };
     } catch (err) {
-      console.error("Error calculating status:", err)
-      return { color: "text-gray-500", text: "Unknown" }
+      console.error("Error calculating status:", err);
+      return { color: "text-gray-500", text: "Unknown" };
     }
-  }
+  };
 
   // Show connect wallet UI if not connected
   if (!isConnected) {
@@ -392,7 +404,7 @@ const CheckMyWill = () => {
           </Card>
         </div>
       </DotBackground>
-    )
+    );
   }
 
   // Show error if there's a fetch error
@@ -402,7 +414,7 @@ const CheckMyWill = () => {
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>{fetchWillDetailsError}</AlertDescription>
       </Alert>
-    )
+    );
   }
 
   // Show loading state
@@ -421,7 +433,7 @@ const CheckMyWill = () => {
           </Card>
         </div>
       </DotBackground>
-    )
+    );
   }
 
   // Show "No Will Found" if no will details
@@ -434,7 +446,7 @@ const CheckMyWill = () => {
               <CardTitle>No Will Found</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="mb-6">It appears you haven't created a digital will yet.</p>
+              <p className="mb-6">It appears you have not created a digital will yet.</p>
               <Button
                 onClick={() => router.push("/create-will/simple")}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
@@ -446,10 +458,10 @@ const CheckMyWill = () => {
           </Card>
         </div>
       </DotBackground>
-    )
+    );
   }
 
-  const status = getStatusInfo()
+  const status = getStatusInfo();
 
   // Main UI with will details
   return (
@@ -467,7 +479,9 @@ const CheckMyWill = () => {
             <Card className="overflow-hidden bg-transparent backdrop-blur-sm">
               <CardHeader className="bg-transparent">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-3xl font-semibold">Digital Will Dashboard</CardTitle>
+                  <CardTitle className="text-3xl font-semibold">
+                    Digital Will Dashboard
+                  </CardTitle>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger>
@@ -486,15 +500,22 @@ const CheckMyWill = () => {
               <CardContent className="p-6 space-y-8">
                 <div className="grid md:grid-cols-2 gap-6">
                   <InfoCard icon={User} title="Beneficiary" content={willDetails[0]} />
-                  <InfoCard icon={Coins} title="Amount Secured" content={`${formatEther(willDetails[1])} Linea`} />
+                  <InfoCard
+                    icon={Coins}
+                    title="Amount Secured"
+                    content={`${formatEther(willDetails[1])} Linea`}
+                  />
                   <InfoCard
                     icon={Calendar}
                     title="Created On"
-                    content={new Date(Number(willDetails[4]) * 1000).toLocaleDateString(undefined, {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    content={new Date(Number(willDetails[4]) * 1000).toLocaleDateString(
+                      undefined,
+                      {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                      },
+                    )}
                   />
                   <InfoCard
                     icon={History}
@@ -540,7 +561,11 @@ const CheckMyWill = () => {
                           />
                           <Button
                             type="submit"
-                            disabled={isDepositing || !depositAmount || Number.parseFloat(depositAmount) <= 0}
+                            disabled={
+                              isDepositing ||
+                              !depositAmount ||
+                              Number.parseFloat(depositAmount) <= 0
+                            }
                             className="whitespace-nowrap bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
                           >
                             {isDepositing ? (
@@ -561,7 +586,11 @@ const CheckMyWill = () => {
                           disabled={loading} // Disable during withdrawal
                           className="w-full hover:bg-red-100 dark:hover:bg-red-900"
                         >
-                          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Withdraw Funds"}
+                          {loading ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            "Withdraw Funds"
+                          )}
                         </Button>
                       )}
                     </div>
@@ -587,7 +616,8 @@ const CheckMyWill = () => {
                   <Alert variant="destructive" className="mt-4">
                     <AlertCircle className="h-4 w-4" />
                     <AlertDescription>
-                      The beneficiary can now claim this will. You cannot add funds or confirm activity at this time.
+                      The beneficiary can now claim this will. You cannot add funds or confirm
+                      activity at this time.
                     </AlertDescription>
                   </Alert>
                 )}
@@ -604,10 +634,16 @@ const CheckMyWill = () => {
         </AnimatePresence>
       </div>
     </DotBackground>
-  )
-}
+  );
+};
 
-const InfoCard = ({ icon: Icon, title, content, highlight = false, className = "" }: InfoCardProps) => (
+const InfoCard = ({
+  icon: Icon,
+  title,
+  content,
+  highlight = false,
+  className = "",
+}) => (
   <div className={`p-4 rounded-lg ${highlight ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
     <h3 className="font-semibold mb-2 flex items-center gap-2">
       <Icon className="w-5 h-5" />
@@ -615,6 +651,6 @@ const InfoCard = ({ icon: Icon, title, content, highlight = false, className = "
     </h3>
     <p className={`${highlight ? "text-4xl font-mono" : "text-sm"} break-all ${className}`}>{content}</p>
   </div>
-)
+);
 
-export default CheckMyWill
+export default CheckMyWill;
