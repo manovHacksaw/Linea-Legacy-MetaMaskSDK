@@ -38,12 +38,12 @@ import { toast } from "@/hooks/use-toast";
 
 
 const CheckMyWill = () => {
-  const [willDetails, setWillDetails] = useState<Will | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [depositAmount, setDepositAmount] = useState("");
-  const [timeRemaining, setTimeRemaining] = useState<string>("--");
-  const [timeProgress, setTimeProgress] = useState(0);
+  const [willDetails, setWillDetails] = useState(null);
+const [loading, setLoading] = useState(false);
+const [error, setError] = useState(null);
+const [depositAmount, setDepositAmount] = useState("");
+const [timeRemaining, setTimeRemaining] = useState("--");
+const [timeProgress, setTimeProgress] = useState(0);
   const [isDepositing, setIsDepositing] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
   const [lastPingTimeAgo, setLastPingTimeAgo] = useState<string>("--");
