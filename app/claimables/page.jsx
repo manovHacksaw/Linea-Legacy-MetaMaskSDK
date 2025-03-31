@@ -285,8 +285,8 @@ export default function Claimables() {
                     No Claimable Assets Found
                   </h3>
                   <p className="text-gray-400 max-w-md">
-                    You don't have any claimable academic assets at this
-                    time. When someone designates you as a beneficiary, they'll
+                    You don&apost have any claimable academic assets at this
+                    time. When someone designates you as a beneficiary, they&aposll
                     appear here.
                   </p>
                   <Button
