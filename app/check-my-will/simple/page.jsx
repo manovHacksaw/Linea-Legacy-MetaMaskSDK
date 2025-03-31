@@ -46,7 +46,7 @@ const [timeRemaining, setTimeRemaining] = useState("--");
 const [timeProgress, setTimeProgress] = useState(0);
   const [isDepositing, setIsDepositing] = useState(false);
   const [isPinging, setIsPinging] = useState(false);
-  const [lastPingTimeAgo, setLastPingTimeAgo] = useState<string>("--");
+  const [lastPingTimeAgo, setLastPingTimeAgo] = useState("--");
   const [withdrawalAvailable, setWithdrawalAvailable] = useState(false);
   const [canBeneficiaryClaim, setCanBeneficiaryClaim] = useState(false);
 
